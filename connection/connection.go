@@ -7,9 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	_ "strings"
-	_ "time"
-
+	
 	"golang.org/x/crypto/ssh"
 	kh "golang.org/x/crypto/ssh/knownhosts"
 )
@@ -19,8 +17,6 @@ type Connection struct {
 	Host     string
 	Password string
 	Command  string
-	Quiet    bool
-	Timeout  int
 }
 
 // PublicKeyFile reads in users ssh key
@@ -94,19 +90,18 @@ func (c *Connection) ExecuteCmd() []string {
 	session, stdout, stderr := c.Connect()
 	defer session.Close()
 	session.Run(c.Command)
-	if !c.Quiet {
-		scanner := bufio.NewScanner(stdout)
-		go io.Copy(os.Stderr, stderr)
-		for scanner.Scan() {
-			if scanner.Text() != "" {
-				output = append(output, c.Host+": "+scanner.Text())
-			} else {
-				break
-			}
+        scanner := bufio.NewScanner(stdout)
+	go io.Copy(os.Stderr, stderr)
+	    for scanner.Scan() {
+		if scanner.Text() != "" {
+		    output = append(output, c.Host+": "+scanner.Text())
+		} else {
+		    break
 		}
-		if scanner.Err() != nil {
-			log.Printf("error: %s\n", scanner.Err())
-		}
+	    }
+	    if scanner.Err() != nil {
+	        log.Printf("error: %s\n", scanner.Err())
+	    }
 	}
 	return output
 }
