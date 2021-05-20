@@ -7,9 +7,8 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	
+
 	"golang.org/x/crypto/ssh"
-	kh "golang.org/x/crypto/ssh/knownhosts"
 )
 
 // Connection for setting up an ssh session for remote commands
@@ -36,16 +35,13 @@ func (c *Connection) PublicKeyFile(file string) ssh.AuthMethod {
 // MakeSSHConfig Gets ssh key from home dir
 func (c *Connection) MakeSSHConfig() *ssh.ClientConfig {
 	user := os.Getenv("USER")
-	hostKeyCallback, err := kh.New("/etc/ssh/known_hosts")
-	if err != nil {
-		log.Fatal("could not create hostkeycallback function: ", err)
-	}
 	config := &ssh.ClientConfig{
 		User: user,
 		Auth: []ssh.AuthMethod{
-			c.PublicKeyFile(fmt.Sprintf("/home/%s/.ssh/id_rsa", user)),
+			c.PublicKeyFile(fmt.Sprintf("%s/.ssh/id_rsa", os.Getenv("HOME"))),
+			ssh.Password(c.Password),
 		},
-		HostKeyCallback: hostKeyCallback,
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 	return config
 }
@@ -90,18 +86,18 @@ func (c *Connection) ExecuteCmd() []string {
 	session, stdout, stderr := c.Connect()
 	defer session.Close()
 	session.Run(c.Command)
-        scanner := bufio.NewScanner(stdout)
+	scanner := bufio.NewScanner(stdout)
 	go io.Copy(os.Stderr, stderr)
-	    for scanner.Scan() {
+
+	for scanner.Scan() {
 		if scanner.Text() != "" {
-		    output = append(output, c.Host+": "+scanner.Text())
+			output = append(output, c.Host+": "+scanner.Text())
 		} else {
-		    break
+			break
 		}
-	    }
-	    if scanner.Err() != nil {
-	        log.Printf("error: %s\n", scanner.Err())
-	    }
+		if scanner.Err() != nil {
+			log.Printf("error: %s\n", scanner.Err())
+		}
 	}
 	return output
 }

@@ -1,4 +1,4 @@
-module gosh
+module github.com/dougkirkley/gosh
 
 go 1.14
 
